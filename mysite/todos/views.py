@@ -1,8 +1,8 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, get_object_or_404, redirect
-from .models import Todo
-from .form import TodoForm
+from .models import Todo, Comment
+from .form import TodoForm, CommentForm
 from django.utils import timezone
 
 
@@ -64,3 +64,53 @@ def todo_delete(request, todo_id):
         return redirect('todos:detail', todo_id=todo.id)
     todo.delete()
     return redirect('todos:index')
+
+
+@login_required(login_url='user:login')
+def comment_create(request, todo_id):
+    todo = get_object_or_404(Todo, pk=todo_id)
+    if request.method == "POST":
+        form = CommentForm(request.POST)
+        if form.is_valid():
+            comment = form.save(commit=False)
+            comment.author = request.user
+            comment.created_at = timezone.now()
+            comment.todo = todo
+            comment.save()
+            return redirect('todos:detail', todo_id=todo.id)
+    else:
+        form = CommentForm()
+    context = {'form': form}
+    return render(request, 'todos/comment_form.html', context)
+
+
+@login_required(login_url='user:login')
+def comment_modify(request, comment_id):
+    comment = get_object_or_404(Comment, pk=comment_id)
+    if request.user != comment.author:
+        messages.error(request, '댓글수정권한이 없습니다')
+        return redirect('todos:detail', todo_id=comment.todo.id)
+
+    if request.method == "POST":
+        form = CommentForm(request.POST, instance=comment)
+        if form.is_valid():
+            comment = form.save(commit=False)
+            comment.author = request.user
+            comment.updated_at = timezone.now()
+            comment.save()
+            return redirect('todos:detail', todo_id=comment.todo.id)
+    else:
+        form = CommentForm(instance=comment)
+    context = {'form': form}
+    return render(request, 'todos/comment_form.html', context)
+
+
+@login_required(login_url='user:login')
+def comment_delete(request, comment_id):
+    comment = get_object_or_404(Comment, pk=comment_id)
+    if request.user != comment.author:
+        messages.error(request, '댓글삭제권한이 없습니다')
+        return redirect('todos:detail', todo_id=comment.todo.id)
+    else:
+        comment.delete()
+    return redirect('todos:detail', todo_id=comment.todo.id)
