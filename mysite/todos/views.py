@@ -54,3 +54,13 @@ def todo_modify(request, todo_id):
         form = TodoForm(instance=todo)
     context = {'form': form}
     return render(request, 'todos/todo_form.html', context)
+
+
+@login_required(login_url='user:login')
+def todo_delete(request, todo_id):
+    todo = get_object_or_404(Todo, pk=todo_id)
+    if request.user != todo.author:
+        messages.error(request, '삭제권한이 없습니다')
+        return redirect('todos:detail', todo_id=todo.id)
+    todo.delete()
+    return redirect('todos:index')
