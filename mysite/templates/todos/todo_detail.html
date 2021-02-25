@@ -11,6 +11,12 @@
                 </div>
             </div>
         </div>
+        {% if request.user == todo.author %}
+        <div class="my-3">
+            <a href="{% url 'todos:todo_modify' todo.id  %}"
+               class="btn btn-sm btn-outline-secondary">수정</a>
+        </div>
+        {% endif %}
     </div>
 </div>
 {% endblock %}
